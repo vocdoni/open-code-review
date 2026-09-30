@@ -79,8 +79,9 @@ func TestClaudeCodeRequestSnapshot(t *testing.T) {
 		t.Fatalf("system prompt did not retain leading instructions and action contract: %q", system)
 	}
 	for _, instruction := range []string{
-		"Do not execute OCR functions or use native or MCP tools for review work",
-		"do not access the local filesystem yourself",
+		"Claude Code's native and MCP tools are disabled here",
+		"OCR executes every requested call and returns its result in the next snapshot",
+		"request the relevant functions instead of relying on the snapshot alone",
 		"Call the CLI's StructuredOutput tool solely to format the response envelope",
 		"Never include StructuredOutput in tool_calls",
 		"Batch independent context requests in the same tool_calls array",
@@ -90,7 +91,7 @@ func TestClaudeCodeRequestSnapshot(t *testing.T) {
 			t.Fatalf("system prompt lost formatting or execution instruction %q", instruction)
 		}
 	}
-	if strings.Contains(system, "Never execute tools") || strings.Contains(string(input), "StructuredOutput") || strings.Contains(schema, "StructuredOutput") {
+	if strings.Contains(system, "Never execute tools") || strings.Contains(system, "Do not execute OCR functions") || strings.Contains(string(input), "StructuredOutput") || strings.Contains(schema, "StructuredOutput") {
 		t.Fatal("CLI formatting was forbidden or exposed as an OCR function")
 	}
 	want := claudeCodeTestJSON(t, struct {
@@ -140,7 +141,7 @@ func TestClaudeCodeRequestToolChoice(t *testing.T) {
 				t.Fatal(err)
 			}
 			if choice == "none" {
-				if schema != "" || len(validators) != 0 || strings.Contains(string(input), `"tools"`) || !strings.Contains(system, "No tools are available") || strings.Contains(system, "StructuredOutput") {
+				if schema != "" || len(validators) != 0 || strings.Contains(string(input), `"tools"`) || !strings.Contains(system, "No tools are available") || strings.Contains(system, "StructuredOutput") || strings.Contains(system, "request the relevant functions") {
 					t.Fatal("tool_choice none still exposed tools or structured output")
 				}
 				return
@@ -158,7 +159,7 @@ func TestClaudeCodeRequestToolChoice(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if schema != "" || len(validators) != 0 || strings.Contains(string(input), `"tools"`) || strings.Contains(system, "StructuredOutput") || !strings.Contains(system, "No tools are available") {
+		if schema != "" || len(validators) != 0 || strings.Contains(string(input), `"tools"`) || strings.Contains(system, "StructuredOutput") || !strings.Contains(system, "No tools are available") || strings.Contains(system, "request the relevant functions") {
 			t.Fatal("tool-free request exposed tools or a formatting instruction")
 		}
 	})
