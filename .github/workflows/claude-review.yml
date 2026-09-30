@@ -26,11 +26,11 @@ on:
       claude_version:
         description: Exact Claude Code npm version, not a moving tag or version range.
         type: string
-        default: '2.1.273'
+        default: '2.1.285'
       effort:
         description: OCR review effort (low, medium, high).
         type: string
-        default: low
+        default: high
       review_concurrency:
         description: Maximum parallel OCR review tasks within this run.
         type: string
@@ -102,7 +102,7 @@ jobs:
         env:
           SOURCE_REPOSITORY: ${{ inputs.source_repository }}
           SOURCE_SHA: ${{ inputs.source_sha }}
-          MODEL: ${{ inputs.model || vars.OCR_MODEL || 'claude-gpt-6-astra' }}
+          MODEL: ${{ inputs.model || vars.OCR_MODEL || 'claude-sonnet-5-5' }}
           GATEWAY_URL: ${{ inputs.gateway_url || vars.OCR_GATEWAY_URL }}
           CLAUDE_VERSION: ${{ inputs.claude_version }}
           LLM_TIMEOUT: ${{ inputs.llm_timeout }}

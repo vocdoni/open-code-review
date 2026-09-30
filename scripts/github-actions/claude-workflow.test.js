@@ -45,7 +45,7 @@ function fixture(fn) {
       SOURCE_SHA: "a".repeat(40),
       MODEL: "claude-gpt-6-astra",
       GATEWAY_URL: "https://gateway.invalid",
-      CLAUDE_VERSION: "2.1.273",
+      CLAUDE_VERSION: "2.1.285",
       LLM_TIMEOUT: "300",
       REVIEW_TASK_TIMEOUT: "30",
     };
@@ -172,18 +172,18 @@ function testRunnerHomeFailsClosedWhenTempCreationFails() {
 }
 
 function testConfigurationAndModelSelection() {
-  assert(workflow.includes("MODEL: ${{ inputs.model || vars.OCR_MODEL || 'claude-gpt-6-astra' }}"));
+  assert(workflow.includes("MODEL: ${{ inputs.model || vars.OCR_MODEL || 'claude-sonnet-5-5' }}"));
   assert(workflow.includes("GATEWAY_URL: ${{ inputs.gateway_url || vars.OCR_GATEWAY_URL }}"));
   const cases = [
     ["opus", "sonnet", "opus"],
     ["", "sonnet", "sonnet"],
-    ["", "", "claude-gpt-6-astra"],
+    ["", "", "claude-sonnet-5-5"],
     ["sonnet[1m]", "haiku", "sonnet[1m]"],
     ["model; $(touch injected)", "haiku", "model; $(touch injected)"],
   ];
   for (const [input, variable, expected] of cases) {
     fixture((dir, env) => {
-      env.MODEL = input || variable || "claude-gpt-6-astra";
+      env.MODEL = input || variable || "claude-sonnet-5-5";
       env.SOURCE_SHA = "A".repeat(40);
       const result = run("Validate workflow configuration", env);
       assert.strictEqual(result.status, 0, result.stderr);
@@ -307,8 +307,8 @@ function testInvalidConfigurationFailsBeforeCheckout() {
     ["GATEWAY_URL", "https://gateway.invalid?token=fixture-secret"],
     ["GATEWAY_URL", "https://gateway.invalid#fixture-secret"],
     ["CLAUDE_VERSION", "latest"],
-    ["CLAUDE_VERSION", "^2.1.273"],
-    ["CLAUDE_VERSION", "2.1.273 --registry=https://elsewhere.invalid"],
+    ["CLAUDE_VERSION", "^2.1.285"],
+    ["CLAUDE_VERSION", "2.1.285 --registry=https://elsewhere.invalid"],
   ];
   for (const [name, value] of cases) {
     fixture((dir, env) => {
@@ -414,7 +414,7 @@ function testPinnedClaudeInstallation() {
     const result = run("Install pinned Claude Code", { ...env, PATH: `${bin}:${env.PATH}` });
     assert.strictEqual(result.status, 0, result.stderr);
     const args = fs.readFileSync(path.join(dir, "npm-args"), "utf8").trim().split("\n");
-    assert(args.includes("@anthropic-ai/claude-code@2.1.273"));
+    assert(args.includes("@anthropic-ai/claude-code@2.1.285"));
     assert(args.includes("https://registry.npmjs.org/"));
     assert(!args.includes("-g"), "bootstrap must not change a persistent runner installation");
     assert.strictEqual(fs.readFileSync(env.GITHUB_PATH, "utf8"), `${installed}\n`);

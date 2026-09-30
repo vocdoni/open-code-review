@@ -18,11 +18,11 @@ on:
       claude_version:
         description: Exact Claude Code npm version, not a moving tag or version range.
         type: string
-        default: '2.1.273'
+        default: '2.1.285'
       effort:
         description: OCR review effort (low, medium, high).
         type: string
-        default: low
+        default: high
       review_concurrency:
         description: Maximum parallel OCR review tasks within this run.
         type: string
