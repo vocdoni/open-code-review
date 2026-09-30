@@ -1,40 +1,49 @@
-#### Obvious Typos or Spelling Errors
-- Spelling errors in variable names, function names, component names, or Props property names
-- Strings in log or error messages containing spelling errors that affect readability
+#### TypeScript and JavaScript Review Principles
+> Hunt for defects a senior reviewer would block the merge for. Correctness, security, and behavioral regressions come first; style-only observations are the lowest priority and must never replace investigating behavior. Do not duplicate what the TypeScript compiler, ESLint, or Prettier already report reliably.
 
-#### Dead Code
-- Code blocks that will never be executed (e.g., branches where the condition is always false, code after a return statement)
-- Variables that are declared but never read or referenced
-- Large blocks of commented-out code (with no apparent intent to retain)
+For every changed file, trace each new or modified branch against its callers, consumers, and the code it replaced before concluding it is correct. Use `file_read`, `file_read_diff`, and `code_search` to find where a changed value, prop, hook, key, or field is produced and consumed. Report every confirmed defect, not only the first one or two; a group with several changed files usually has several independent risks.
 
-#### Code Quality Checks
-- **Duplicate Code**: Check for common logic that can be extracted
-- **Code Comments**: Complex business logic should have clear explanatory comments (avoid commenting obvious code)
-- **Hardcoding**: Business-related hardcoded strings are prohibited, especially URL paths and business numbers; simple UI text may be relaxed
-- **Variable Declarations**: Using `var` is strictly prohibited; use `let` or `const`
-- **Equality Comparisons**: Using `==` and `!=` is prohibited; use strict equality `===` and `!==`
-- **TypeScript Types**: Avoid using `any` type; if necessary, provide a comment explaining the reason
-- **Null Checks**: Perform null checks when accessing values or destructuring to avoid null pointer exceptions
-- **Ternary Expressions**: Nested ternary expressions are not allowed
+#### Behavioral Regressions
+- A validation, required-field rule, guard, error message, default value, or UI state that the old code enforced or displayed and the new code no longer does.
+- Logic that now depends on a component being mounted, a query having loaded, a list being non-empty, or a feature flag being set, where the old code ran unconditionally. Check the loading, empty, and error states.
+- Messages, translations, error texts, or props that are still defined but no longer reach the screen or the caller after the change.
+- Changed return shapes, event payloads, query keys, storage formats, or API request bodies whose existing consumers were not updated. Include save/restore round-trips such as drafts, local storage, and URL state.
 
-#### React Best Practices
-- **Hooks Usage**: Verify compliance with Hooks rules (only call at the top level, only call in React functions)
-- **State Management**: Ensure state is placed at the appropriate level; avoid unnecessary state lifting
-- **Side Effect Handling**: Verify useEffect correctly handles dependencies and cleanup functions
-- **Performance Optimization**: Verify proper use of React.memo, useMemo, useCallback (based on performance analysis; avoid over-optimization)
-- **Render Side Effects**: Side effects in React component render methods are strictly prohibited (e.g., API calls, DOM manipulation)
-- **Inline Styles**: Avoid using inline `style` attributes, except for dynamic styles
-- **Inner Components**: Declaring new components inside a component is prohibited; use render methods instead (e.g., `renderItem`, not `<Item/>`)
+#### State, Effects, and Lifecycle
+- Derived or cached state that is not reset or invalidated when its inputs change (a new id, group, route, or selection), so stale data is shown, submitted, or treated as valid.
+- `useEffect`/`useLayoutEffect` with missing or unstable dependencies, missing cleanup for subscriptions, timers, listeners, or in-flight requests, or effects that loop by setting state they depend on.
+- Async results applied after the user has changed the inputs or left the view: race conditions between overlapping requests, responses committed without checking they are still current, and state set on unmounted components.
+- Stale closures in callbacks, handlers, and memoized functions that capture props or state from an earlier render.
+- Refs, focus targets, portals, or DOM elements referenced after the element that owned them unmounted or moved.
+- Hooks called conditionally, in loops, or outside React functions; components declared inside other components, which remount and lose state on every render.
+- Keys that are missing, unstable, or reused, causing list items to swap state; context providers, toasts, dialogs, or singletons that share an id or instance across unrelated uses.
 
-#### Async Handling Standards
-- **Error Handling**: Async functions must include proper error handling with user-friendly error messages
-- **Prefer async/await**: Prefer async/await over Promises; callback hell is prohibited
-- **Async in Loops**: Distinguish between independent async operations (use `Promise.all` for parallelism) and dependent async operations (use sequential execution); prefer `Promise.all` for performance
+#### Contracts Across Changed Files
+- Providers or contexts that do not wrap every consumer, or silently fall back to a disconnected default.
+- New props, fields, or options that some call path never sets, and removed ones that callers still pass or read.
+- Shared identifiers, cache keys, or event names reused with a different meaning or scope, including library behavior such as merge-by-id or upsert semantics.
+- Duplicated sources of truth: the same status computed in several places that can disagree after the change.
 
-#### Code Security Checks
-- **XSS Protection**: Verify that user input is properly escaped
-- **innerHTML Safety**: Using innerHTML to directly insert user input is prohibited; use textContent or apply XSS protection
-- **Code Injection Protection**: Using eval(), Function() constructor, and string argument forms of setTimeout/setInterval is strictly prohibited
-- **Dangerous Methods**: Using document.write() is prohibited as it causes page reflow and security issues
-- **Sensitive Information**: Check whether API keys or sensitive data are exposed
-- **Prototype Chain Safety**: Modifying native object prototypes (e.g., Array.prototype, Object.prototype) is prohibited
+#### Error Handling and Async
+- Promise rejections that are swallowed, unhandled, or turned into success; `await` missing where ordering or error propagation matters; `Promise.all` where one failure should not discard the others, or sequential awaits where the operations must be atomic.
+- Recovery actions, retries, or buttons that cannot run in the state where they are offered.
+- Error, loading, and empty states that are unreachable or that hide the actual failure from the user.
+
+#### Types and Values
+- Unsafe casts, non-null assertions, or `any` that hide a real `null`/`undefined` or shape mismatch reachable at runtime.
+- Truthiness checks that mishandle valid falsy values (`0`, `''`, `false`), loose equality that changes behavior, and numeric or date conversions that can produce `NaN`, wrong time zones, or precision loss.
+- Mutation of props, state, query-cache data, or shared objects that callers expect to be immutable.
+
+#### Performance Introduced by the Change
+Report only with a concrete consequence in the changed code.
+- Context values, props, or dependency arrays that receive new objects or functions every render and so re-render every consumer or retrigger effects.
+- Unbounded loops, requests, or renders; queries refetched on every keystroke without debounce where the cost matters.
+
+#### Security
+Confirm attacker control or a trust boundary before reporting.
+- User-controlled data rendered through `dangerouslySetInnerHTML`, `innerHTML`, `document.write`, URL or `href` values without scheme validation, or passed to `eval`, `Function`, or string forms of `setTimeout`/`setInterval`.
+- Authorization or authentication decisions made only on the client, tokens or secrets stored or logged unsafely, and sensitive data exposed in URLs, analytics, or error reports.
+- Prototype pollution through merging untrusted objects; open redirects; `postMessage` handlers without origin checks.
+
+#### Lowest Priority
+Raise these only after all defects above have been reported, and only when they are true of the changed code: misspelled identifiers or user-visible strings, code that can never execute, variables that are never read, and duplicated logic that is likely to diverge. Do not report formatting, naming preferences, ternary nesting, or other readability choices as defects.
